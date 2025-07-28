@@ -1,9 +1,11 @@
 from subprocess import Popen, DEVNULL
-from os.path import dirname, sep
+# from os.path import dirname, sep
+from pathlib import Path
 from typing import Any
 from enum import Enum
 
-from test.test_env import TEST_ADDRESS, TEST_PORT
+
+from test.test_env import TEST_IP, TEST_PORT
 
 RETRY_COUNT = 3
 
@@ -20,20 +22,15 @@ class Mode(Enum):
 
 
 class Local:
-    path: str = dirname(__file__) + sep + sep.join(["db", "clavrs.exe"])
-    __process: Popen[str]
+    path: Path = Path(__file__).parent / "db" / "clavrs.exe"
+    __process: Popen
     # Is set to True once the process started running
     __alive: bool = False
 
-    @classmethod
-    def test_instance(cls):
-        return Local(address=TEST_ADDRESS, port=TEST_PORT, mode=Mode.Test)
-
-    def __init__(self, ip: str = "127.0.0.1", port: int = 3254, _std_out: Any = DEVNULL, mode: Mode = Mode.Default,
-                 *args, **kwargs):
+    def __init__(self, ip: str = "127.0.0.1", port: int = 3254, _std_out: Any = DEVNULL, mode: Mode = Mode.Default, **kwargs):
         # https://stackoverflow.com/questions/14735001/ignoring-output-from-subprocess-popen
         address = ip + ":" + str(port)
-        arguments = [self.path, "--address", address, "--mode", mode.value]
+        arguments = [str(self.path), "--address", address, "--mode", mode.value]
         self.__process = Popen(arguments, stdout=_std_out, stderr=_std_out)
         self.__alive = True
 
@@ -43,6 +40,10 @@ class Local:
                 break
         else:
             raise ConnectionError("Database did not start up correctly or in time.")
+
+    @classmethod
+    def test_instance(cls):
+        return Local(ip=TEST_IP, port=TEST_PORT, mode=Mode.Test)
 
     def kill(self):
         if self.__alive:
