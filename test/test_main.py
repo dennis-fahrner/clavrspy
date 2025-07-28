@@ -1,8 +1,15 @@
-from test.TestRunner import main as TestRunner, Config
+import sys
+import unittest
+from test.TestRunner import TestRunner, Config
 
 if __name__ == '__main__':
     Config.PRINT_LIVE = True
     Config.SINGLE_LINE_STACK = True
 
-    # Custom TestRunner automatically injects itself
-    TestRunner(module='test.test_cases')
+    loader = unittest.TestLoader()
+    suite = loader.loadTestsFromName('test.test_cases')
+
+    runner = TestRunner(verbosity=0)
+    result = runner.run(suite)
+
+    sys.exit(0 if result.wasSuccessful() else 1)

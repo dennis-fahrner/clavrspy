@@ -498,12 +498,16 @@ class TestProgram(unittest.TestProgram):
             self.testRunner = TestRunner(verbosity=self.verbosity)
         unittest.TestProgram.runTests(self)
 
-
 main = TestProgram
 
 ##############################################################################
 # Executing this module from the command line
 ##############################################################################
 
-if __name__ == "__main__":
-    main(module=None)
+# if __name__ == "__main__":
+#     print("w")
+#     result = main(module=None)  # This returns the TestProgram, not result
+#     print("x")
+#     success = result.result.wasSuccessful()
+#     print(success, "AAJDJASDJASDJA")
+#     sys.exit(0 if success else 1)
