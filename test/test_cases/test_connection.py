@@ -1,24 +1,26 @@
 from unittest import TestCase
+from typing import Optional
+from test.test_env import TEST_IP, TEST_PORT
 from Connection.Connection import Connection
 from Connection.ConnectionString import ConnectionString
 from Connection.DBSocket.TCPSocket import TCPSocket
 from LocalDB.Local import Local
-from test.test_env import TEST_IP, TEST_PORT
 
 
 class TestConnection(TestCase):
-    db: Local
+    db: Optional[Local]
 
     @classmethod
     def setUpClass(cls) -> None:
         try:
             cls.db = Local.test_instance()
         except Exception as e:
-            cls.db = None
+            raise e
 
     @classmethod
     def tearDownClass(cls) -> None:
-        cls.db.kill()
+        if cls.db is not None:
+            cls.db.kill()
 
     def test_conn_string(self):
         user, auth, name, test = ("user", "auth", "name", "1")
