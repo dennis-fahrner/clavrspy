@@ -1,0 +1,57 @@
+from subprocess import Popen, DEVNULL
+from os.path import dirname, sep
+from typing import Any
+from enum import Enum
+
+from test.test_env import TEST_ADDRESS, TEST_PORT
+
+RETRY_COUNT = 3
+
+
+def _is_port_in_use(port: int) -> bool:
+    import socket
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+        return s.connect_ex(('localhost', port)) == 0
+
+
+class Mode(Enum):
+    Test = "test"
+    Default = "default"
+
+
+class Local:
+    path: str = dirname(__file__) + sep + sep.join(["db", "clavrs.exe"])
+    __process: Popen[str]
+    # Is set to True once the process started running
+    __alive: bool = False
+
+    @classmethod
+    def test_instance(cls):
+        return Local(address=TEST_ADDRESS, port=TEST_PORT, mode=Mode.Test)
+
+    def __init__(self, ip: str = "127.0.0.1", port: int = 3254, _std_out: Any = DEVNULL, mode: Mode = Mode.Default,
+                 *args, **kwargs):
+        # https://stackoverflow.com/questions/14735001/ignoring-output-from-subprocess-popen
+        address = ip + ":" + str(port)
+        arguments = [self.path, "--address", address, "--mode", mode.value]
+        self.__process = Popen(arguments, stdout=_std_out, stderr=_std_out)
+        self.__alive = True
+
+        # Check if the launch was successful
+        for _ in range(RETRY_COUNT):
+            if _is_port_in_use(port):
+                break
+        else:
+            raise ConnectionError("Database did not start up correctly or in time.")
+
+    def kill(self):
+        if self.__alive:
+            self.__process.kill()
+            # https://stackoverflow.com/questions/52476265/killing-shell-true-process-results-in-resourcewarning-subprocess-is-still-running
+            self.__process.wait(timeout=0.5)
+
+    def __del__(self):
+        if self.__alive:
+            # Kill db once its finished
+            self.kill()
+            self.__process.terminate()
