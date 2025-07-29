@@ -1,4 +1,4 @@
-from subprocess import Popen, DEVNULL
+from subprocess import Popen, DEVNULL, PIPE
 from pathlib import Path
 from typing import Any
 from enum import Enum
@@ -62,3 +62,11 @@ class Local:
             # Kill db once its finished
             self.kill()
             self.__process.terminate()
+
+def get_clavrs_version() -> str:
+    path = Path(__file__).parent / "db" / "clavrs.exe"
+    process = Popen([str(path), "--version"], stdout=PIPE, stderr=PIPE)
+    stdout, stderr = process.communicate(timeout=5)
+    if process.returncode != 0:
+        raise RuntimeError(f"Failed to get version: {stderr.decode().strip()}")
+    return stdout.decode().strip()
