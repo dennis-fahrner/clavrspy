@@ -1,5 +1,4 @@
 from subprocess import Popen, DEVNULL
-# from os.path import dirname, sep
 from pathlib import Path
 from typing import Any
 from enum import Enum
@@ -13,7 +12,7 @@ RETRY_COUNT = 3
 def _is_port_in_use(port: int) -> bool:
     import socket
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-        return s.connect_ex(('localhost', port)) == 0
+        return s.connect_ex(("localhost", port)) == 0
 
 
 class Mode(Enum):
@@ -27,7 +26,14 @@ class Local:
     # Is set to True once the process started running
     __alive: bool = False
 
-    def __init__(self, ip: str = "127.0.0.1", port: int = 3254, _std_out: Any = DEVNULL, mode: Mode = Mode.Default, **kwargs):
+    def __init__(
+        self,
+        ip: str = "127.0.0.1",
+        port: int = 3254,
+        _std_out: Any = DEVNULL,
+        mode: Mode = Mode.Default,
+        **_kwargs
+    ):
         # https://stackoverflow.com/questions/14735001/ignoring-output-from-subprocess-popen
         address = ip + ":" + str(port)
         arguments = [str(self.path), "--address", address, "--mode", mode.value]

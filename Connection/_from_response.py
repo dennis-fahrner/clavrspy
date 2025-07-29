@@ -12,7 +12,7 @@ def from_response(message: str, give_error: bool) -> Any:
             return True
         elif message.startswith("Err"):
             if give_error:
-                raise Exception(message)
+                raise Exception(message) from e
             else:
                 return False
         else:
