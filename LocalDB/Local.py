@@ -32,7 +32,12 @@ class Local:
         _std_out: Any = DEVNULL,
         mode: Mode = Mode.Default,
         **_kwargs
-    ):
+    ):        
+
+        import os
+        path = get_path()
+        print(os.access(path, os.X_OK))
+
         # https://stackoverflow.com/questions/14735001/ignoring-output-from-subprocess-popen
         address = ip + ":" + str(port)
         arguments = [str(self.path), "--address", address, "--mode", mode.value]
