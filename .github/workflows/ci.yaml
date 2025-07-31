@@ -35,31 +35,38 @@ jobs:
 
       - name: Install dependencies
         run: python -m pip install --upgrade pip && pip install -r requirements.txt
-      
-      - name: Remove existing clavrs.exe if present
-        shell: pwsh
-        run: |
-          $file = "LocalDB/db/clavrs.exe"
-          if (Test-Path $file) {
-            Remove-Item $file -Force
-            Write-Host "Deleted existing clavrs.exe"
-          } else {
-            Write-Host "clavrs.exe does not exist, nothing to delete"
-          }
 
-      - name: Download latest clavrs.exe release (versioned file)
+      - name: Download latest clavrs.exe release (Windows)
+        if: startsWith(matrix.os, 'windows')
         shell: pwsh
         run: |
           $release = Invoke-RestMethod -Uri https://api.github.com/repos/cydian-ger/clavrs/releases/latest
-          # Find asset whose name matches clavrs-*.exe
           $asset = $release.assets | Where-Object { $_.name -match '^clavrs-.*\.exe$' } | Select-Object -First 1
           if (-not $asset) {
             Write-Error "No matching clavrs executable found in release assets!"
             exit 1
           }
           Write-Host "Downloading $($asset.name) from $($asset.browser_download_url)"
-          Invoke-WebRequest -Uri $asset.browser_download_url -OutFile LocalDB/db/clavrs.exe
+          # Save as original filename
+          $outputPath = Join-Path -Path LocalDB/db -ChildPath $asset.name
+          Invoke-WebRequest -Uri $asset.browser_download_url -OutFile $outputPath
 
+      - name: Download latest clavrs release (Linux)
+        if: startsWith(matrix.os, 'ubuntu')
+        shell: bash
+        run: |
+          release=$(curl -s https://api.github.com/repos/cydian-ger/clavrs/releases/latest)
+          asset_name=$(echo "$release" | jq -r '.assets[] | select(.name | test("linux")) | .name' | head -n1)
+          asset_url=$(echo "$release" | jq -r '.assets[] | select(.name == "'"$asset_name"'") | .browser_download_url')
+          if [ -z "$asset_url" ]; then
+            echo "No matching clavrs AppImage found in release assets!"
+            exit 1
+          fi
+          echo "Downloading $asset_url"
+          mkdir -p LocalDB/db
+          curl -L "$asset_url" -o "LocalDB/db/$asset_name"
+          chmod +x "LocalDB/db/$asset_name"
+  
 
       - name: Run unittests
         run: python -m test.run_tests
