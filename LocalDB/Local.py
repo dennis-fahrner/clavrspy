@@ -7,7 +7,7 @@ import sys
 from LocalDB.get_path import get_path
 from test.test_env import TEST_IP, TEST_PORT
 
-RETRY_COUNT = 3
+RETRY_COUNT = 4
 
 
 def _is_port_in_use(port: int) -> bool:
@@ -35,10 +35,6 @@ class Local:
         mode: Mode = Mode.Default,
         **_kwargs
     ):
-        if "linux" in self.path:        
-            import subprocess
-            proc=subprocess.Popen(['ls','-l'])  # <-- Change the command here
-            proc.communicate()
         # https://stackoverflow.com/questions/14735001/ignoring-output-from-subprocess-popen
         address = ip + ":" + str(port)
         arguments = [str(self.path), "--address", address, "--mode", mode.value]
@@ -46,15 +42,12 @@ class Local:
         self.__process = Popen(arguments, stdout=sys.stdout, stderr=sys.stderr)
         self.__alive = True
 
-        if self.__process.poll() is not None:
-            stdout, stderr = self.__process.communicate()
-            raise RuntimeError(f"Process exited immediately with {self.__process.returncode}, stdout: {stdout.decode()}, stderr: {stderr.decode()}")
-
         # Check if the launch was successful
-        for _ in range(RETRY_COUNT):
+        for i in range(RETRY_COUNT):
             if _is_port_in_use(port):
                 break
-            time.sleep(0.5)
+            # Increasing timeout 0.5 -> 1.0 -> 2.0 -> 4.0
+            time.sleep(0.5 * (2 ** i))
         else:
             raise ConnectionError(f"Database did not start up correctly or in time. {self.dead_dump()}")
 
