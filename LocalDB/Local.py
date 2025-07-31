@@ -1,9 +1,8 @@
 from subprocess import Popen, DEVNULL, PIPE
-from pathlib import Path
 from typing import Any
 from enum import Enum
 
-
+from LocalDB.get_path import get_path
 from test.test_env import TEST_IP, TEST_PORT
 
 RETRY_COUNT = 3
@@ -21,7 +20,7 @@ class Mode(Enum):
 
 
 class Local:
-    path: Path = Path(__file__).parent / "db" / "clavrs.exe"
+    path: str = get_path()
     __process: Popen
     # Is set to True once the process started running
     __alive: bool = False
@@ -64,8 +63,7 @@ class Local:
             self.__process.terminate()
 
 def get_clavrs_version() -> str:
-    path = Path(__file__).parent / "db" / "clavrs.exe"
-    process = Popen([str(path), "--version"], stdout=PIPE, stderr=PIPE)
+    process = Popen([str(get_path()), "--version"], stdout=PIPE, stderr=PIPE)
     stdout, stderr = process.communicate(timeout=5)
     if process.returncode != 0:
         raise RuntimeError(f"Failed to get version: {stderr.decode().strip()}")
