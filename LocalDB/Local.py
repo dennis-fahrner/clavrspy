@@ -1,4 +1,4 @@
-from subprocess import Popen, DEVNULL, PIPE
+from subprocess import Popen, PIPE #, DEVNULL
 from typing import Any
 from enum import Enum
 
@@ -29,7 +29,7 @@ class Local:
         self,
         ip: str = "127.0.0.1",
         port: int = 3254,
-        _std_out: Any = DEVNULL,
+        _std_out: Any = PIPE,
         mode: Mode = Mode.Default,
         **_kwargs
     ):        
