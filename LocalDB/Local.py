@@ -1,6 +1,8 @@
 from subprocess import Popen, PIPE #, DEVNULL
 from typing import Any
 from enum import Enum
+import os
+import sys
 
 from LocalDB.get_path import get_path
 from test.test_env import TEST_IP, TEST_PORT
@@ -33,8 +35,6 @@ class Local:
         mode: Mode = Mode.Default,
         **_kwargs
     ):        
-
-        import os
         path = get_path()
         print(os.access(path, os.X_OK))
 
@@ -42,7 +42,7 @@ class Local:
         address = ip + ":" + str(port)
         arguments = [str(self.path), "--address", address, "--mode", mode.value]
         print(arguments)
-        self.__process = Popen(arguments, stdout=_std_out, stderr=_std_out)
+        self.__process = Popen(arguments, stdout=sys.stdout, stderr=sys.stderr)
         self.__alive = True
 
         # Check if the launch was successful
