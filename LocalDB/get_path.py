@@ -9,7 +9,8 @@ def get_path() -> str:
     filenames = [filename for filename in filenames if "clavrs" in filename]
 
     filters = []
-    current_platform = platform.system().lower():
+    current_platform = platform.system().lower()
+
     if current_platform == "windows":
         filters.append(lambda filename: "windows" in filename and ".exe" in filename)
     elif current_platform ==  "linux":
