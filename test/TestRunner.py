@@ -81,7 +81,7 @@ class Table(object):
         self.allow_newlines = allow_newlines
 
     def __len__(self, x):
-        return len(re.sub("\033\[[0-9];[0-9];[0-9]{1,2}m", "", x))
+        return len(re.sub(r"\033\[[0-9];[0-9];[0-9]{1,2}m", "", x))
 
     def addRow(self, row):
         rows = [[''] for l in range(len(row))]
@@ -289,7 +289,7 @@ class _TestResult(TestResult):
         # Remove traceback to have single line failure
         if Config.SINGLE_LINE_STACK:
             # Replaces old exception with new instance with updated error message that is a single line
-            new_err = err[1].__class__(str(err[1]).split("\n")[0])
+            new_err = err[1].__class__(str(err[1]).replace("\n", "")[0])
             err = (err[0], new_err, None)
 
         TestResult.addFailure(self, test, err)
@@ -397,7 +397,7 @@ class TestRunner(Template_mixin):
         sortedResult = self.sortResult(result.result)
         padding = 4 * ' '
         table = Table(padding=padding)
-        table.addTitles(["Test group/Test case", "Count", "Pass", "Fail", "Error"])
+        table.addTitles(["Test group/Test case", "Count", "Pass ", "Fail ", "Error"])
         tests = ''
         for cid, (testClass, classResults) in enumerate(sortedResult):  # Iterate over the test cases
             classTable = Table(padding=2 * padding)
