@@ -1,7 +1,7 @@
 from subprocess import Popen, PIPE #, DEVNULL
 from typing import Any
 from enum import Enum
-import os
+import time
 import sys
 
 from LocalDB.get_path import get_path
@@ -35,7 +35,6 @@ class Local:
         mode: Mode = Mode.Default,
         **_kwargs
     ):
-
         if "linux" in self.path:        
             import subprocess
             proc=subprocess.Popen(['ls','-l'])  # <-- Change the command here
@@ -51,6 +50,7 @@ class Local:
         for _ in range(RETRY_COUNT):
             if _is_port_in_use(port):
                 break
+            time.sleep(0.5)
         else:
             raise ConnectionError(f"Database did not start up correctly or in time. {self.dead_dump()}")
 
