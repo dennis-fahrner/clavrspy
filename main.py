@@ -52,24 +52,24 @@ if __name__ == '__main__':
     # TODO Persist and Load
     # Use read_handle.map_into()
     #
-    from LocalDB.Local import Local
+    # from LocalDB.Local import Local
 
-    local = Local.test_instance()
-    socket = TCPSocket(TEST_IP, TEST_PORT)
+    # local = Local.test_instance()
+    socket = TCPSocket("127.0.0.1", 3254)
 
     with Connection("user!auth/?name:name", socket=socket) as db:
         col = db.get_collection()
-        print(db.put(col.a, "value1"))
-        print(db.get(col.a))
-        print(db.raw("PURGE", give_error=True))
-        print(db.get(col.a))
-        print("EXISTS:", db.exists(col.a), db.exists(col.b))
-        print("GET:", db.get(col.a))
-        print("HAS:", db.has(col.a, "a"), db.has(col.a, "b"), db.has(col.b, "b"))
-        print("DELETE:", db.delete(col.b), db.exists(col.b))
-        print("CLEAR:", db.clear(col.a), db.get(col.a))
-        print("RETRACT:", db.put(col.a, "a2"), db.put(col.a, "a3"), db.retract(col.a, "a2"))
-        print("REPLACE:", db.get(col.a), db.replace(col.a, "aReplace"))
+        # print(db.put(col.a, "value1"))
+        # print(db.get(col.a))
+        # print(db.raw("PURGE", give_error=True))
+        # print(db.get(col.a))
+        # print("EXISTS:", db.exists(col.a), db.exists(col.b))
+        # print("GET:", db.get(col.a))
+        # print("HAS:", db.has(col.a, "a"), db.has(col.a, "b"), db.has(col.b, "b"))
+        # print("DELETE:", db.delete(col.b), db.exists(col.b))
+        # print("CLEAR:", db.clear(col.a), db.get(col.a))
+        # print("RETRACT:", db.put(col.a, "a2"), db.put(col.a, "a3"), db.retract(col.a, "a2"))
+        # print("REPLACE:", db.get(col.a), db.replace(col.a, "aReplace"))
         print("POP:", db.pop(col.a), db.get(col.a))
         db.put(col.a, ["a", "b"])
         # print("RAW:", db.raw("UnpollutedPartOfMessageMessagePollutedErrorPython"))
