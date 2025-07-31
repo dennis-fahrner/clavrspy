@@ -41,6 +41,7 @@ class Local:
         # https://stackoverflow.com/questions/14735001/ignoring-output-from-subprocess-popen
         address = ip + ":" + str(port)
         arguments = [str(self.path), "--address", address, "--mode", mode.value]
+        print(arguments)
         self.__process = Popen(arguments, stdout=_std_out, stderr=_std_out)
         self.__alive = True
 
