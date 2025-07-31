@@ -34,10 +34,12 @@ class Local:
         _std_out: Any = PIPE,
         mode: Mode = Mode.Default,
         **_kwargs
-    ):        
-        path = get_path()
-        # print(os.access(path, os.X_OK))
+    ):
 
+        if "linux" in self.path:        
+            import subprocess
+            proc=subprocess.Popen(['ls','-l'])  # <-- Change the command here
+            proc.communicate()
         # https://stackoverflow.com/questions/14735001/ignoring-output-from-subprocess-popen
         address = ip + ":" + str(port)
         arguments = [str(self.path), "--address", address, "--mode", mode.value]
