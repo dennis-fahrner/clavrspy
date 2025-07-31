@@ -50,7 +50,7 @@ class Local:
             if _is_port_in_use(port):
                 break
         else:
-            raise ConnectionError(f"Database did not start up correctly or in time. {self.dead_dump}")
+            raise ConnectionError(f"Database did not start up correctly or in time. {self.dead_dump()}")
 
     @classmethod
     def test_instance(cls):
