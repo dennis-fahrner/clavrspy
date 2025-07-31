@@ -46,6 +46,10 @@ class Local:
         self.__process = Popen(arguments, stdout=sys.stdout, stderr=sys.stderr)
         self.__alive = True
 
+        if self.__process.poll() is not None:
+            stdout, stderr = self.__process.communicate()
+            raise RuntimeError(f"Process exited immediately with {self.__process.returncode}, stdout: {stdout.decode()}, stderr: {stderr.decode()}")
+
         # Check if the launch was successful
         for _ in range(RETRY_COUNT):
             if _is_port_in_use(port):
