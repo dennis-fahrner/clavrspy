@@ -52,11 +52,11 @@ if __name__ == '__main__':
     # TODO Persist and Load
     # Use read_handle.map_into()
     #
-    # from LocalDB.Local import Local
+    
+    from LocalDB.Local import Local
+    local = Local(permission_file=True)
 
-    # local = Local.test_instance()
     socket = TCPSocket("127.0.0.1", 3254)
-
     with Connection("user!auth/?name:name", socket=socket) as db:
         col = db.get_collection()
         # print(db.put(col.a, "value1"))
@@ -72,6 +72,9 @@ if __name__ == '__main__':
         # print("REPLACE:", db.get(col.a), db.replace(col.a, "aReplace"))
         print("POP:", db.pop(col.a), db.get(col.a))
         db.put(col.a, ["a", "b"])
+        print("AUTHENTICATE", db.raw('AUTH "root" "root"'))
+        print("AUTHENTICATE", db.raw('AUTH "alice" "alice-token"'))
+        # print("PURGE", db.raw('PURGE'))
         # print("RAW:", db.raw("UnpollutedPartOfMessageMessagePollutedErrorPython"))
         # print("RAW2:", db.raw("Test"))
     exit(0)

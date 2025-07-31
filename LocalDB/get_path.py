@@ -4,6 +4,14 @@ import os
 import re
 
 
+DB_DIR = "db"
+
+
+def get_base_path() -> Path:
+    path = Path(__file__).parent / DB_DIR
+    return path
+
+
 def get_path() -> str:
     filenames = [filename for filename in os.listdir(Path(__file__).parent / "db")]
     filenames = [filename for filename in filenames if "clavrs" in filename]
@@ -31,5 +39,5 @@ def get_path() -> str:
             continue
 
     latest_file = sorted(files_with_versions, key=lambda x: x[0], reverse=True)[0][1]
-    path = Path(__file__).parent / "db" / latest_file
+    path = Path(__file__).parent / DB_DIR / latest_file
     return str(path)

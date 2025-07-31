@@ -1,10 +1,11 @@
 from subprocess import Popen, PIPE, DEVNULL
-from typing import Any
+from typing import Optional
+from threading import Thread
+from collections import deque
 from enum import Enum
 import time
-import sys
 
-from LocalDB.get_path import get_path
+from LocalDB.get_path import get_path, get_base_path
 from test.test_env import TEST_IP, TEST_PORT
 
 RETRY_COUNT = 4
@@ -31,16 +32,26 @@ class Local:
         self,
         ip: str = "127.0.0.1",
         port: int = 3254,
-        _std_out: Any = PIPE,
         mode: Mode = Mode.Default,
+        permission_file: bool = False,
         **_kwargs
     ):
         # https://stackoverflow.com/questions/14735001/ignoring-output-from-subprocess-popen
         address = ip + ":" + str(port)
         arguments = [str(self.path), "--address", address, "--mode", mode.value]
-        
+
+        if permission_file:
+            permission_path = str(get_base_path() / "permission.yaml")
+            arguments += ["--perm-path", permission_path]
+
         # TODO, capture / save error outputs maybe with PIPE
-        self.__process = Popen(arguments, stdout=DEVNULL, stderr=DEVNULL)
+        self.__process = Popen(arguments, stdout=DEVNULL, stderr=PIPE)
+
+        # To capture errors you need to flush out pipe else tests get stuck
+        self.__stderr_lines: deque = deque()
+        self.__stderr_thread = Thread(target=self._drain_stderr, args=(self.__process.stderr,), daemon=True)
+        self.__stderr_thread.start()
+
         self.__alive = True
 
         # Check if the launch was successful
@@ -50,7 +61,7 @@ class Local:
             # Increasing timeout 0.5 -> 1.0 -> 2.0 -> 4.0
             time.sleep(0.5 * (2 ** i))
         else:
-            raise ConnectionError("Database did not start up correctly or in time.")
+            raise ConnectionError(f"Database did not start up correctly or in time.") #  ({self.__process.communicate()})")
 
     @classmethod
     def test_instance(cls):
@@ -61,6 +72,10 @@ class Local:
             self.__process.kill()
             # https://stackoverflow.com/questions/52476265/killing-shell-true-process-results-in-resourcewarning-subprocess-is-still-running
             self.__process.wait(timeout=0.5)
+
+    def _drain_stderr(self, stream):
+        for line in iter(stream.readline, b''):
+            self.__stderr_lines.append(line.decode().strip())
 
     def __del__(self):
         if self.__alive:
