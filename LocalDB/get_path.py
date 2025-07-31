@@ -9,13 +9,13 @@ def get_path() -> str:
     filenames = [filename for filename in filenames if "clavrs" in filename]
 
     filters = []
-    match platform.system().lower():
-        case "windows":
-            filters.append(lambda filename: "windows" in filename and ".exe" in filename)
-        case "linux":
-            filters.append(lambda filename: "linux" in filename)
-        case _:
-            pass
+    current_platform = platform.system().lower():
+    if current_platform == "windows":
+        filters.append(lambda filename: "windows" in filename and ".exe" in filename)
+    elif current_platform ==  "linux":
+        filters.append(lambda filename: "linux" in filename)
+    else:
+        pass
     
     filenames = [f for f in filenames if any(filter_func(f) for filter_func in filters)]
 
