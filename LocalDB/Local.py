@@ -36,12 +36,12 @@ class Local:
         **_kwargs
     ):        
         path = get_path()
-        print(os.access(path, os.X_OK))
+        # print(os.access(path, os.X_OK))
 
         # https://stackoverflow.com/questions/14735001/ignoring-output-from-subprocess-popen
         address = ip + ":" + str(port)
         arguments = [str(self.path), "--address", address, "--mode", mode.value]
-        print(arguments)
+        # print(arguments)
         self.__process = Popen(arguments, stdout=sys.stdout, stderr=sys.stderr)
         self.__alive = True
 

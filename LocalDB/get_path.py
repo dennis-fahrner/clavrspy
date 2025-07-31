@@ -6,6 +6,7 @@ import re
 
 def get_path() -> str:
     filenames = [filename for filename in os.listdir(Path(__file__).parent / "db")]
+    print(filenames)
     filenames = [filename for filename in filenames if "clavrs" in filename]
 
     filters = []
