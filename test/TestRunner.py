@@ -221,6 +221,8 @@ class _TestResult(TestResult):
         #   stack trace,
         # )
         self.result = []
+        #
+        self.outputBuffer = StringIO()
 
     def startTest(self, test):
         TestResult.startTest(self, test)

@@ -1,11 +1,13 @@
-from subprocess import Popen, DEVNULL, PIPE
+from subprocess import Popen, PIPE, DEVNULL
 from typing import Any
 from enum import Enum
+import time
+import sys
 
 from LocalDB.get_path import get_path
 from test.test_env import TEST_IP, TEST_PORT
 
-RETRY_COUNT = 3
+RETRY_COUNT = 4
 
 
 def _is_port_in_use(port: int) -> bool:
@@ -29,25 +31,24 @@ class Local:
         self,
         ip: str = "127.0.0.1",
         port: int = 3254,
-        _std_out: Any = DEVNULL,
+        _std_out: Any = PIPE,
         mode: Mode = Mode.Default,
         **_kwargs
-    ):        
-
-        import os
-        path = get_path()
-        print(os.access(path, os.X_OK))
-
+    ):
         # https://stackoverflow.com/questions/14735001/ignoring-output-from-subprocess-popen
         address = ip + ":" + str(port)
         arguments = [str(self.path), "--address", address, "--mode", mode.value]
-        self.__process = Popen(arguments, stdout=_std_out, stderr=_std_out)
+        
+        # TODO, capture / save error outputs maybe with PIPE
+        self.__process = Popen(arguments, stdout=DEVNULL, stderr=DEVNULL)
         self.__alive = True
 
         # Check if the launch was successful
-        for _ in range(RETRY_COUNT):
+        for i in range(RETRY_COUNT):
             if _is_port_in_use(port):
                 break
+            # Increasing timeout 0.5 -> 1.0 -> 2.0 -> 4.0
+            time.sleep(0.5 * (2 ** i))
         else:
             raise ConnectionError("Database did not start up correctly or in time.")
 
