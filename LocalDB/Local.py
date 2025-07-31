@@ -1,4 +1,4 @@
-from subprocess import Popen, PIPE #, DEVNULL
+from subprocess import Popen, PIPE, DEVNULL
 from typing import Any
 from enum import Enum
 import time
@@ -38,8 +38,9 @@ class Local:
         # https://stackoverflow.com/questions/14735001/ignoring-output-from-subprocess-popen
         address = ip + ":" + str(port)
         arguments = [str(self.path), "--address", address, "--mode", mode.value]
-        # print(arguments)
-        self.__process = Popen(arguments, stdout=sys.stdout, stderr=sys.stderr)
+        
+        # TODO, capture / save error outputs maybe with PIPE
+        self.__process = Popen(arguments, stdout=DEVNULL, stderr=DEVNULL)
         self.__alive = True
 
         # Check if the launch was successful
@@ -49,18 +50,11 @@ class Local:
             # Increasing timeout 0.5 -> 1.0 -> 2.0 -> 4.0
             time.sleep(0.5 * (2 ** i))
         else:
-            raise ConnectionError(f"Database did not start up correctly or in time. {self.dead_dump()}")
+            raise ConnectionError("Database did not start up correctly or in time.")
 
     @classmethod
     def test_instance(cls):
         return Local(ip=TEST_IP, port=TEST_PORT, mode=Mode.Test)
-
-    def dead_dump(self) -> str:
-        # Check if process exited early
-        if self.__process.poll() is not None:  # Process has exited
-            stdout, stderr = self.__process.communicate()
-            return f"Exited with ({self.__process.returncode}) STDOUT: {stdout.decode()}, STDERR: {stderr.decode()}"
-        return ""
 
     def kill(self):
         if self.__alive:
