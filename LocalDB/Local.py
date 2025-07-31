@@ -43,9 +43,6 @@ class Local:
         arguments = [str(self.path), "--address", address, "--mode", mode.value]
         print(arguments)
         self.__process = Popen(arguments, stdout=_std_out, stderr=_std_out)
-        stdout, stderr = self.__process.communicate(timeout=5)
-        print("STDOUT:", stdout.decode())
-        print("STDERR:", stderr.decode())
         self.__alive = True
 
         # Check if the launch was successful
