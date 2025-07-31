@@ -50,11 +50,18 @@ class Local:
             if _is_port_in_use(port):
                 break
         else:
-            raise ConnectionError("Database did not start up correctly or in time.")
+            raise ConnectionError(f"Database did not start up correctly or in time. {self.dead_dump}")
 
     @classmethod
     def test_instance(cls):
         return Local(ip=TEST_IP, port=TEST_PORT, mode=Mode.Test)
+
+    def dead_dump(self) -> str:
+        # Check if process exited early
+        if self.__process.poll() is not None:  # Process has exited
+            stdout, stderr = self.__process.communicate()
+            return f"Exited with ({self.__process.returncode}) STDOUT: {stdout.decode()}, STDERR: {stderr.decode()}"
+        return ""
 
     def kill(self):
         if self.__alive:
