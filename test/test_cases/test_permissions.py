@@ -133,11 +133,10 @@ def __set_up_functions(cls) -> None:
 
             # Create a lambda function that generates a dummy value
             value_generator = lambda *args, **kwargs: None
-            match type_hint:
-                case _ if type_hint is DataPointer:
-                    value_generator = lambda self, *args, **kwargs: self.root_collection.a
-                case _ if type_hint is str:
-                    value_generator = lambda *args, **kwargs: "test"
+            if type_hint is DataPointer:
+                value_generator = lambda self, *args, **kwargs: self.root_collection.a
+            elif type_hint is str:
+                value_generator = lambda *args, **kwargs: "test"
             parameters[parameter_name] = value_generator
 
         # Get the operation type: read, write
