@@ -78,12 +78,25 @@ class TestPermissions(TestCase):
 
     @classmethod
     def tearDownClass(cls) -> None:
-        if cls.db is not None:
-            cls.db.kill()
+        cls.db.kill()
 
     def test_write(self) -> None:
         """%ignore
         Permissions<write>
+        """
+        write_funcs = {
+            k: v for k, v in self.functions.items()
+            if "write" in v[0].__testhint__["op_type"]
+        }
+        for key, value in write_funcs.items():
+            with self.subTest(key=key):
+                func, data = value[0], value[1]
+                data = {k: param_func(self) for k, param_func in data.items()}
+                func(self.perm_conn, **data)
+    
+    def test_read(self) -> None:
+        """%ignore
+        Permissions<read>
         """
         write_funcs = {
             k: v for k, v in self.functions.items()
@@ -93,10 +106,7 @@ class TestPermissions(TestCase):
             with self.subTest(key=key):
                 func, data = value[0], value[1]
                 data = {k: param_func(self) for k, param_func in data.items()}
-                try:
-                    func(self.perm_conn, **data)
-                except Exception as e:
-                    raise
+                func(self.perm_conn, **data)
 
 def __set_up_functions(cls) -> None:
     # For every database operation function (with __testhint__ decorator) generate two test

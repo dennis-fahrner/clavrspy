@@ -78,9 +78,9 @@ class Local:
             self.__stderr_lines.append(line.decode().strip())
 
     def __del__(self):
+        self.kill()
         if self.__alive:
             # Kill db once its finished
-            self.kill()
             self.__process.terminate()
 
 def get_clavrs_version() -> str:

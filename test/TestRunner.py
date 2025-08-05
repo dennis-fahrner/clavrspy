@@ -29,6 +29,7 @@ try:
     from StringIO import StringIO # type: ignore
 except ImportError:
     from io import StringIO
+import types
 import sys
 import re
 import humanize
@@ -254,31 +255,24 @@ class _TestResult(TestResult):
         self.complete_output()
 
     def addSubTest(self, test, subtest, err):
-        if err is None:
-            return
+        # Add a custom printing function for the subclass
+        def dummy_id(self):
+            return f"{test._testMethodName} [{','.join([f'{k}={v}' for k,v in subtest.params.items()])}]" # pyright: ignore[reportAttributeAccessIssue]
+        subtest.id = types.MethodType(dummy_id, subtest)
 
+        # Add a SubTest
         if Config.SINGLE_LINE_STACK:
-            clean_msg = str(err[1]).replace("\n", " ")
-            new_err = err[1].__class__(str(clean_msg)) # type: ignore
-            err = (err[0], new_err, None)
+            if err:
+                clean_msg = str(err[1]).replace("\n", " ")
+                new_err = err[1].__class__(str(clean_msg)) # type: ignore
+                err = (err[0], new_err, None)
 
-        # Record as failure or error like normal tests
-        if issubclass(err[0], AssertionError): # type: ignore
-            self.failure_count += 1
-            TestResult.addFailure(self, subtest, err) # type: ignore
-            _, _exc_str = self.failures[-1]
-            # output = self.complete_output()
-            self.result.append((1, subtest, "output", _exc_str))
-            if Config.PRINT_LIVE:
-                sys.stderr.write('F')
+        if err is None:
+            self.addSuccess(subtest)
+        elif issubclass(err[0], AssertionError): # type: ignore
+            self.addFailure(subtest, err) # type: ignore
         else:
-            self.error_count += 1
-            TestResult.addError(self, subtest, err)
-            _, _exc_str = self.errors[-1]
-            # output = self.complete_output()
-            self.result.append((2, subtest, "output", _exc_str))
-            if Config.PRINT_LIVE:
-                sys.stderr.write('E')
+            self.addError(subtest, err) # type: ignore
 
     def addSuccess(self, test):
         self.success_count += 1
@@ -292,6 +286,7 @@ class _TestResult(TestResult):
         else:
             if Config.PRINT_LIVE:
                 sys.stderr.write('.')
+                sys.stderr.flush()
 
     def addError(self, test, err):
         self.error_count += 1
@@ -313,6 +308,7 @@ class _TestResult(TestResult):
         else:
             if Config.PRINT_LIVE:
                 sys.stderr.write('E')
+                sys.stderr.flush()
 
     def addFailure(self, test, err):
         self.failure_count += 1
@@ -334,6 +330,7 @@ class _TestResult(TestResult):
         else:
             if Config.PRINT_LIVE:
                 sys.stderr.write('F')
+                sys.stderr.flush()
 
 
 class TestRunner(Template_mixin):
@@ -364,12 +361,15 @@ class TestRunner(Template_mixin):
         return result
 
     def sortResult(self, result_list):
-        # unittest does not seems to run in any particular order.
-        # Here at least we want to group them together by class.
         rmap = {}
         classes = []
         for n, test, output, error in result_list:
             testClass = test.__class__
+
+            # If test is a subtest, add it under the original test
+            if test.__dict__.get("test_case"):
+                testClass = test.__dict__.get("test_case").__class__
+
             if testClass not in rmap:
                 rmap[testClass] = []
                 classes.append(testClass)
@@ -430,12 +430,13 @@ class TestRunner(Template_mixin):
         table = Table(padding=padding)
         table.addTitles(["Test group/Test case", "Count", "Pass ", "Fail ", "Error"])
         tests = ''
+
         for cid, (testClass, classResults) in enumerate(sortedResult):  # Iterate over the test cases
             classTable = Table(padding=2 * padding)
             classTable.addTitles(["Test Name", "Stack", "Status"])
             # subtotal for a class
             np = nf = ne = 0
-            for n, t, o, e in classResults:
+            for n, _t, _o, _e in classResults:
                 if n == 0:
                     np += 1
                 elif n == 1:
@@ -453,8 +454,8 @@ class TestRunner(Template_mixin):
             tests += "\n" + padding + self.bc.CYAN + name + self.bc.END + "\n"
             doc = testClass.__doc__ and testClass.__doc__.split("\n")[0] or ""
             desc = doc and '%s: %s' % (name, doc) or name
+            
             # style = ne > 0 and 'errorClass' or nf > 0 and 'failClass' or 'passClass',
-
             table.addRow([desc, str(np + nf + ne), str(np), str(nf), str(ne)])
             for tid, (n, test, output, error) in enumerate(classResults):  # Iterate over the unit tests
                 classTable.addRow(self._generate_report_test(cid, tid, n, test, output, error))
@@ -476,11 +477,7 @@ class TestRunner(Template_mixin):
 
         desc = doc and ('%s: %s' % (name, doc)) or name
         tmpl = has_output and self.REPORT_TEST_WITH_OUTPUT_TMPL or self.REPORT_TEST_NO_OUTPUT_TMPL
-
-        # o and e should be byte string because they are collected from stdout and stderr?
         if isinstance(output, str):
-            # TODO: some problem with 'string_escape': it escape \n and mess up formating
-            # uo = unicode(o.encode('string_escape'))
             try:
                 uo = output.decode('latin-1') # type: ignore
             except AttributeError:
@@ -488,8 +485,6 @@ class TestRunner(Template_mixin):
         else:
             uo = output
         if isinstance(error, str):
-            # TODO: some problem with 'string_escape': it escape \n and mess up formating
-            # ue = unicode(e.encode('string_escape'))
             try:
                 ue = error.decode('latin-1') # type: ignore
             except AttributeError:
@@ -501,54 +496,7 @@ class TestRunner(Template_mixin):
             output=uo + ue,
         )
         row = [desc, script, self.STATUS[n]]
-        # row = tmpl % dict(
-        #    tid = tid,
-        #    desc = desc,
-        #    script = script,
-        #    status = self.STATUS[n],
-        # )
         return row
-        # if not has_output:
-        #    return
-
-
-##############################################################################
-# Facilities for running tests from the command line
-##############################################################################
-# test_write (key='exists') | outputException: 
-# {'_testMethodName': 'runTest',
-#  '_outcome': None,
-#  '_testMethodDoc': None,
-#  '_cleanups': [],
-#  '_subtest': None,
-#  '_type_equality_funcs': {<class 'dict'>: 'assertDictEqual'
-# , <class 'list'>: 'assertListEqual',
-#  <class 'tuple'>: 'assertTupleEqual',
-#  <class 'set'>: 'assertSetEqual',
-#  <class 'frozenset'>: 'assertSetEqual',
-#  <class 'str'>: 'assertMultiLineEqual'},
-#  '_message': <object object at 0x0000021859E34A20>,
-#  'test_case': <test.test_cases.test_permissions.TestPermissions testMethod=test_write>,
-#  'params': _OrderedChainMap({'key': 'exists'}),
-#  'failureException': <class 'AssertionError'>
-#
-#
-#   | test_write (key='has')    | 
-# outputException: 
-# {'_testMethodName': 'test_write',
-#  '_outcome': <unittest.case._Outcome object at 0x0000020F88235AB0>,
-#  '_testMethodDoc': '%ignore\n        Permissions<write>\n        ',
-#  '_cleanups': [],
-#  '_subtest': None,
-#  '_type_equality_funcs': {<class 'dict'>: 'assertDictEqual', <class 'list'>: 'assertListEqual',
-#  <class 'tuple'>: 'assertTupleEqual',
-#  <class 'set'>: 'assertSetEqual',
-#  <class 'frozenset'>: 'assertSetEqual',
-#  <class 'str'>: 'assertMultiLineEqual'},
-#  'root_conn': <Connection.Connection.Connection object at 0x0000020F88237610>,
-#  'root_collection': <Connection.Collection.Collection object at 0x0000020F88235150>,
-#  'perm_conn': <Connection.Connection.Connection object at 0x0000020F882370D0>}
-
 
 # Note: Reuse unittest.TestProgram to launch test. In the future we may
 # build our own launcher to support more specific command line
