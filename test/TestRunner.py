@@ -428,7 +428,7 @@ class TestRunner(Template_mixin):
 
             # Note procedually generated methods
             if "%generated" in (test._testMethodDoc or ""):
-                test._testMethodName = "*" + test._testMethodName
+                test._testMethodName = "+" + test._testMethodName
 
             if test_class not in rmap:
                 rmap[test_class] = []

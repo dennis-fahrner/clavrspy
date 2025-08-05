@@ -141,7 +141,7 @@ class TestPermissions(TestCase):
             raise AssertionError(f"One or more subtests failed:\n{msg}")
 
 def __set_up_functions(cls) -> None:
-    test_name_prefix = "test_"
+    test_name_prefix = "test__"
 
     # For every database operation function (with __testhint__ decorator) generate two test
     # These tests are then added to the TestPermissions Class
@@ -201,7 +201,7 @@ def __set_up_functions(cls) -> None:
         setattr(cls, negative_test_name, fn_)
         cls.functions[func_name] = (func, parameters)
 
-    cls.__doc__ = f"<{len(cls.functions) * 2}> Tests were generated at run time.\nProcedual Tests are denoted with a preceeding '*'"
+    cls.__doc__ = f"<{len(cls.functions) * 2}> Tests were generated at run time.\nProcedual Tests are denoted with a preceeding '+'"
 
 
 
