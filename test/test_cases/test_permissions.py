@@ -42,7 +42,8 @@ class TestPermissions(TestCase):
         # Get the permissions from the annotations of each function
         instance_methods = {
             # add the permissions, - indicates False should be set. e.g. -write means no write
-            name: {"authtoken": "auth", "operations": {k.strip("-"): False if k.startswith("-") else True for k in get_matches(attr.__doc__)}}
+            # remove the * from the function
+            name.replace("*", ""): {"authtoken": "auth", "operations": {k.strip("-"): False if k.startswith("-") else True for k in get_matches(attr.__doc__)}}
             for name, attr in cls.__dict__.items()
             if isinstance(attr, FunctionType) and name.startswith("test_")  # plain function, unbound
         }
@@ -89,8 +90,8 @@ class TestPermissions(TestCase):
             if "write" in v[0].__testhint__["op_type"]
         }
         failures, errors = ([], [])
-        for key, value in write_funcs.items():
-            with self.subTest(key=key):
+        for i, (key, value) in enumerate(write_funcs.items()):
+            with self.subTest(key=key, i=(len(write_funcs)-1)-i):
                 try:
                     func, data = value[0], value[1]
                     data = {k: param_func(self) for k, param_func in data.items()}
@@ -119,8 +120,8 @@ class TestPermissions(TestCase):
             if "read" in v[0].__testhint__["op_type"]
         }
         failures, errors = ([], [])
-        for key, value in write_funcs.items():
-            with self.subTest(key=key):
+        for i, (key, value) in enumerate(write_funcs.items()):
+            with self.subTest(key=key, i=(len(write_funcs)-1)-i):
                 try:
                     func, data = value[0], value[1]
                     data = {k: param_func(self) for k, param_func in data.items()}
@@ -140,6 +141,8 @@ class TestPermissions(TestCase):
             raise AssertionError(f"One or more subtests failed:\n{msg}")
 
 def __set_up_functions(cls) -> None:
+    test_name_prefix = "test_"
+
     # For every database operation function (with __testhint__ decorator) generate two test
     # These tests are then added to the TestPermissions Class
     for func_name, func in {
@@ -175,18 +178,17 @@ def __set_up_functions(cls) -> None:
 
         # Permission name for the yaml file
         permission_name = f"{op_type}.{func_name}"
-        prefix = "test_auto__"
         
         # Generate the positive test, if all is false except that specific operation => it should work
-        test_name = prefix + f"{op_type}_{func_name}"
+        test_name = test_name_prefix + f"{op_type}_{func_name}"
         def fn(self, _parameters=parameters, _func=func):
             _fn = {key: param_func(self) for key, param_func in _parameters.items()}
             _func(self.perm_conn, **_fn)
-        fn.__doc__ = f"%ignore\nPermissions<{permission_name}>"
+        fn.__doc__ = f"%ignore\nPermissions<{permission_name}>%generated"
         setattr(cls, test_name, fn)
 
         # Generate the negative test, if all is true except that specific operation => it should not work
-        negative_test_name = prefix + f"{op_type}_{func_name}_denied"
+        negative_test_name = test_name_prefix + f"{op_type}_{func_name}_denied"
         def fn_(self, _parameters=parameters, _func=func):
             with self.assertRaises(Exception) as err:
                 _fn = {key: param_func(self) for key, param_func in _parameters.items()}
@@ -195,16 +197,12 @@ def __set_up_functions(cls) -> None:
             self.assertIn("Permission", str(err.exception),  
                         msg=f"Expected 'Permission' in exception message, but got:\n{str(err.exception)}")
 
-        fn_.__doc__ = f"%ignore\nPermissions<-{permission_name},write,read>"
+        fn_.__doc__ = f"%ignore\nPermissions<-{permission_name},write,read>%generated"
         setattr(cls, negative_test_name, fn_)
-
-        # ToDo, make it a lambda call
-        # FIX THIS
-        # This is so that you can check for every read / writes
         cls.functions[func_name] = (func, parameters)
 
-    # print(cls.functions.items())
-    # cls.__doc__ = str(cls.functions.items())
+    cls.__doc__ = f"<{len(cls.functions) * 2}> Tests were generated at run time.\nProcedual Tests are denoted with a preceeding '*'"
+
 
 
 

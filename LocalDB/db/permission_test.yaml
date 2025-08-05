@@ -8,134 +8,134 @@ default:
 root:
   authtoken: root
 
-test_auto__read_exists:
-  authtoken: auth
-  operations:
-    read.exists: true
-
-test_auto__read_exists_denied:
-  authtoken: auth
-  operations:
-    read: true
-    read.exists: false
-    write: true
-
-test_auto__read_get:
-  authtoken: auth
-  operations:
-    read.get: true
-
-test_auto__read_get_denied:
-  authtoken: auth
-  operations:
-    read: true
-    read.get: false
-    write: true
-
-test_auto__read_has:
-  authtoken: auth
-  operations:
-    read.has: true
-
-test_auto__read_has_denied:
-  authtoken: auth
-  operations:
-    read: true
-    read.has: false
-    write: true
-
-test_auto__write_clear:
-  authtoken: auth
-  operations:
-    write.clear: true
-
-test_auto__write_clear_denied:
-  authtoken: auth
-  operations:
-    read: true
-    write: true
-    write.clear: false
-
-test_auto__write_delete:
-  authtoken: auth
-  operations:
-    write.delete: true
-
-test_auto__write_delete_denied:
-  authtoken: auth
-  operations:
-    read: true
-    write: true
-    write.delete: false
-
-test_auto__write_pop:
-  authtoken: auth
-  operations:
-    write.pop: true
-
-test_auto__write_pop_denied:
-  authtoken: auth
-  operations:
-    read: true
-    write: true
-    write.pop: false
-
-test_auto__write_purge:
-  authtoken: auth
-  operations:
-    write.purge: true
-
-test_auto__write_purge_denied:
-  authtoken: auth
-  operations:
-    read: true
-    write: true
-    write.purge: false
-
-test_auto__write_put:
-  authtoken: auth
-  operations:
-    write.put: true
-
-test_auto__write_put_denied:
-  authtoken: auth
-  operations:
-    read: true
-    write: true
-    write.put: false
-
-test_auto__write_replace:
-  authtoken: auth
-  operations:
-    write.replace: true
-
-test_auto__write_replace_denied:
-  authtoken: auth
-  operations:
-    read: true
-    write: true
-    write.replace: false
-
-test_auto__write_retract:
-  authtoken: auth
-  operations:
-    write.retract: true
-
-test_auto__write_retract_denied:
-  authtoken: auth
-  operations:
-    read: true
-    write: true
-    write.retract: false
-
 test_read:
   authtoken: auth
   operations:
     read: true
     write: false
 
+test_read_exists:
+  authtoken: auth
+  operations:
+    read.exists: true
+
+test_read_exists_denied:
+  authtoken: auth
+  operations:
+    read: true
+    read.exists: false
+    write: true
+
+test_read_get:
+  authtoken: auth
+  operations:
+    read.get: true
+
+test_read_get_denied:
+  authtoken: auth
+  operations:
+    read: true
+    read.get: false
+    write: true
+
+test_read_has:
+  authtoken: auth
+  operations:
+    read.has: true
+
+test_read_has_denied:
+  authtoken: auth
+  operations:
+    read: true
+    read.has: false
+    write: true
+
 test_write:
   authtoken: auth
   operations:
     read: false
     write: true
+
+test_write_clear:
+  authtoken: auth
+  operations:
+    write.clear: true
+
+test_write_clear_denied:
+  authtoken: auth
+  operations:
+    read: true
+    write: true
+    write.clear: false
+
+test_write_delete:
+  authtoken: auth
+  operations:
+    write.delete: true
+
+test_write_delete_denied:
+  authtoken: auth
+  operations:
+    read: true
+    write: true
+    write.delete: false
+
+test_write_pop:
+  authtoken: auth
+  operations:
+    write.pop: true
+
+test_write_pop_denied:
+  authtoken: auth
+  operations:
+    read: true
+    write: true
+    write.pop: false
+
+test_write_purge:
+  authtoken: auth
+  operations:
+    write.purge: true
+
+test_write_purge_denied:
+  authtoken: auth
+  operations:
+    read: true
+    write: true
+    write.purge: false
+
+test_write_put:
+  authtoken: auth
+  operations:
+    write.put: true
+
+test_write_put_denied:
+  authtoken: auth
+  operations:
+    read: true
+    write: true
+    write.put: false
+
+test_write_replace:
+  authtoken: auth
+  operations:
+    write.replace: true
+
+test_write_replace_denied:
+  authtoken: auth
+  operations:
+    read: true
+    write: true
+    write.replace: false
+
+test_write_retract:
+  authtoken: auth
+  operations:
+    write.retract: true
+
+test_write_retract_denied:
+  authtoken: auth
+  operations:
+    read: true
+    write: true
+    write.retract: false

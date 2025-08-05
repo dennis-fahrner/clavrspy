@@ -137,19 +137,30 @@ class Table(object):
                     col_widths[i] = length
 
         # Build horizontal line
-        hline = self.padding + "+"
-        for w in col_widths:
-            hline += "-" * (w + 2) + "+"
+        hline_base = self.padding + "{left}"  # left char (e.g. "┌")
+        middle_parts = []
+        for index, w in enumerate(col_widths):
+            if index == len(col_widths) - 1:
+                build_char = "{right}"  # right bound placeholder
+            else:
+                build_char = "{mid}"    # middle junction placeholder
+            middle_parts.append("─" * (w + 2) + build_char)
+        hline_base += "".join(middle_parts)
+
+        # Now fill in the placeholders
+        hline_top = hline_base.format(left="┌", mid="┬", right="┐")
+        hline_mid = hline_base.format(left="├", mid="┼", right="┤")
+        hline_bot = hline_base.format(left="└", mid="┴", right="┘")
 
         # Build title line
         if self.__titles__:
             titles_padded = []
             for i, t in enumerate(self.__titles__):
                 titles_padded.append(t.center(col_widths[i]))
-            title_line = self.padding + "| " + " | ".join(titles_padded) + " |"
-            output = hline + "\n" + title_line + "\n" + hline + "\n"
+            title_line = self.padding + "│ " + " │ ".join(titles_padded) + " │"
+            output = hline_top + "\n" + title_line + "\n" + hline_mid + "\n"
         else:
-            output = hline + "\n"
+            output = hline_top + "\n"
 
         # Build data rows
         for r in self.__rows__:
@@ -159,9 +170,9 @@ class Table(object):
             for i, c in enumerate(r):
                 visible_len = self.__length__(c)
                 padded_cells.append(c + ' ' * (col_widths[i] - visible_len))
-            output += self.padding + "| " + " | ".join(padded_cells) + " |\n"
+            output += self.padding + "│ " + " │ ".join(padded_cells) + " │\n"
 
-        output += hline + "\n"
+        output += hline_bot + "\n"
         return output
 
 
@@ -288,9 +299,20 @@ class _TestResult(TestResult):
         self.complete_output()
 
     def addSubTest(self, test, subtest, err):
-        # Add a custom printing function for the subclass
+        # Subtest:
+        #  Needs index / enumerate labeled i, if i==0 that means its the last test
+        #  The parameters are displayed in brackets
+
         def dummy_id(self):
-            return f" ⤷{test._testMethodName} [{','.join([f'{v}' for k,v in subtest.params.items()])}]" # pyright: ignore[reportAttributeAccessIssue]
+            params = dict(subtest.params.items()) # pyright: ignore[reportAttributeAccessIssue]
+            index = params.pop("i", 1)
+            if index == 0:
+                start = "└"
+            else:
+                start = "├"
+            return f" {start}─ [{','.join([f'{v}' for k,v in params.items()])}]"
+
+        # Replace the id function, which is what is used to display it in the table view
         subtest.id = types.MethodType(dummy_id, subtest)
 
         # Add a SubTest
@@ -403,10 +425,14 @@ class TestRunner(Template_mixin):
             parent_test = getattr(test, "test_case", test)
             test_class = parent_test.__class__
 
+            # Note procedually generated methods
+            if "%generated" in (test._testMethodDoc or ""):
+                test._testMethodName = "*" + test._testMethodName
+
             if test_class not in rmap:
                 rmap[test_class] = []
                 classes.append(test_class)
-
+            
             # Ensure parent test is added once (either as standalone or before subtests)
             if is_subtest:
                 if parent_test not in seen_parents:
@@ -456,17 +482,34 @@ class TestRunner(Template_mixin):
                  heading + \
                  report
         try:
-            time_elapsed = (self.stopTime - self.startTime)
-            sys.stderr.write('\nTests took %s - (%s)\n' % (humanize.naturaldelta(time_elapsed), time_elapsed))
             self.stream.write(output.encode('utf8')) # type: ignore
+            self.stream.flush()
         except TypeError:
             self.stream.write(output)
+            self.stream.flush()
 
     def _generate_heading(self, report_attrs):
         a_lines = []
+        # Add the time it took for the tests
         for name, value in report_attrs:
             line = self.bc.CYAN + name + ": " + self.bc.END + value + "\n"
         a_lines.append(line) # type: ignore
+
+        # Generate description
+        class DefaultDict(dict):
+            def __missing__(self, key):
+                return '{' + key + '}'
+
+        time_elapsed = (self.stopTime - self.startTime)
+        self.description = self.description.format_map({'humanized_time': humanize.naturaldelta(time_elapsed), 'time': time_elapsed})
+        
+        self.description = self.description.lstrip(" \n")
+        if "\n" in self.description:
+            description_lines = self.description.split("\n")
+        else:
+            description_lines = [self.description]
+        self.description = '\n  ' + '\n  '.join(description_lines)
+        
         heading = ''.join(a_lines) + \
                   self.bc.CYAN + "Description:" + self.bc.END + self.description + "\n"
         return heading
@@ -500,14 +543,26 @@ class TestRunner(Template_mixin):
 
             # Color classname header blue
             tests += "\n" + padding + self.bc.CYAN + name + self.bc.END + "\n"
-            doc = testClass.__doc__ and testClass.__doc__.split("\n")[0] or ""
-            desc = doc and '%s: %s' % (name, doc) or name
             
             # style = ne > 0 and 'errorClass' or nf > 0 and 'failClass' or 'passClass',
-            table.addRow([desc, str(np + nf + ne), str(np), str(nf), str(ne)])
+            table.addRow([name, str(np + nf + ne), str(np), str(nf), str(ne)])
             for tid, (n, test, output, error) in enumerate(classResults):  # Iterate over the unit tests
                 classTable.addRow(self._generate_report_test(cid, tid, n, test, output, error))
+            
+            # Add Description right under that thang
+            doc = testClass.__doc__ or ""
+            if doc:
+                doc = doc.strip(" \n")
+                if "\n" in doc:
+                    doc_lines = doc.split("\n")
+                else:
+                    doc_lines = [doc]
+                doc_lines = [doc_line.strip(" \n") for doc_line in doc_lines]
+                doc = ('\n' + padding * 2).join(doc_lines)
+                tests += padding * 2 + doc + '\n'
+
             tests += str(classTable)
+
         table.addRow(
             ["Total", str(result.success_count + result.failure_count + result.error_count), str(result.success_count),
              str(result.failure_count), str(result.error_count)])
@@ -515,7 +570,6 @@ class TestRunner(Template_mixin):
         return report
 
     def _generate_report_test(self, cid, tid, n, test, output, error):
-        # maybe here the error thing with indent
         has_output = bool(output or error)
         tid = (n == 0 and 'p' or 'f') + 't%s.%s' % (cid + 1, tid + 1)
         name = test.id().split('.')[-1]

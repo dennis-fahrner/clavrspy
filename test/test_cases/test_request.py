@@ -6,6 +6,9 @@ from test.test_env import TEST_IP, TEST_PORT
 
 
 class TestRequest(TestCase):
+    """
+    Tests the inner workings of Valid Requests and Invalid Requests
+    """
     db: Local
 
     @classmethod
