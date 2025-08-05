@@ -10,6 +10,7 @@ if __name__ == '__main__':
     Config.PRINT_LIVE = not bool(os.getenv("GITHUB_ACTIONS"))
     Config.SINGLE_LINE_STACK = True
 
+
     loader = unittest.TestLoader()
     suite = loader.loadTestsFromName('test.test_cases')
 
