@@ -29,6 +29,7 @@ try:
     from StringIO import StringIO # type: ignore
 except ImportError:
     from io import StringIO
+import io
 import time
 import types
 import sys
@@ -485,6 +486,7 @@ class TestRunner(Template_mixin):
             self.stream.write(output.encode('utf8')) # type: ignore
             self.stream.flush()
         except TypeError:
+            self.stream = io.TextIOWrapper(self.stream.buffer, encoding='utf-8')
             self.stream.write(output)
             self.stream.flush()
 
