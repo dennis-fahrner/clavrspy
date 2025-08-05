@@ -13,4 +13,4 @@ def fmt(data: Union[DataPointer, List[DataPointer], str, List[str]]):
     elif isinstance(data, list):
         return "(" + ", ".join([fmt(d) for d in data]) + ")"
     else:
-        raise NotImplementedError("")
+        raise NotImplementedError(f"fmt is not implemented for type {type(data)}")

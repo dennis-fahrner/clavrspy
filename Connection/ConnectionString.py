@@ -19,7 +19,6 @@ connection_regex = __compile_pattern()
 
 class ConnectionString:
     __string: str
-    __valid: bool = False
     user: str
     auth: str
     # Optional Arguments

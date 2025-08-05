@@ -26,7 +26,7 @@ HTMLTestRunner's author is Wai Yip Tung and I am grateful for his contribution.
 import datetime
 
 try:
-    from StringIO import StringIO
+    from StringIO import StringIO # type: ignore
 except ImportError:
     from io import StringIO
 import sys
@@ -36,8 +36,8 @@ import unittest
 
 
 class Config:
-    PRINT_LIVE = True
-    SINGLE_LINE_STACK = True
+    PRINT_LIVE: bool = True
+    SINGLE_LINE_STACK: bool = True
 
 
 # ------------------------------------------------------------------------
@@ -80,7 +80,7 @@ class Table(object):
         self.padding = padding
         self.allow_newlines = allow_newlines
 
-    def __len__(self, x):
+    def __length__(self, x):  # type: ignore
         return len(re.sub(r"\033\[[0-9];[0-9];[0-9]{1,2}m", "", x))
 
     def addRow(self, row):
@@ -91,9 +91,9 @@ class Table(object):
                 if len(y) == 0 and self.allow_newlines == False:
                     continue
                 try:
-                    self.__columnSize__[i] = max(self.__columnSize__[i], self.__len__(y))
+                    self.__columnSize__[i] = max(self.__columnSize__[i], self.__length__(y))
                 except IndexError:
-                    self.__columnSize__.append(self.__len__(y))
+                    self.__columnSize__.append(self.__length__(y))
                 rows[i].append(y)
                 maxrows = max(j, maxrows)
         for i in range(len(rows)):
@@ -104,9 +104,9 @@ class Table(object):
     def addTitles(self, titles):
         for i, x in enumerate(titles):
             try:
-                self.__columnSize__[i] = max(self.__columnSize__[i], self.__len__(x))
+                self.__columnSize__[i] = max(self.__columnSize__[i], self.__length__(x))
             except IndexError:
-                self.__columnSize__.append(self.__len__(x))
+                self.__columnSize__.append(self.__length__(x))
         self.__titles__ = titles
 
     def __repr__(self):
@@ -126,7 +126,7 @@ class Table(object):
             if len(x) < len(self.__columnSize__):
                 x += ((len(self.__columnSize__) - len(x)) * [''])
             for i, c in enumerate(x):
-                x[i] = c.ljust(self.__columnSize__[i]) + (len(c) - self.__len__(c) - 3) * ' '
+                x[i] = c.ljust(self.__columnSize__[i]) + (len(c) - self.__length__(c) - 3) * ' '
             rows.append(self.padding + "| " + " | ".join(x) + " |")
         return hline + "\n" + title + "\n".join(rows) + "\n" + hline + "\n"
 
@@ -253,6 +253,33 @@ class _TestResult(TestResult):
         # We must disconnect stdout in stopTest(), which is guaranteed to be called.
         self.complete_output()
 
+    def addSubTest(self, test, subtest, err):
+        if err is None:
+            return
+
+        if Config.SINGLE_LINE_STACK:
+            clean_msg = str(err[1]).replace("\n", " ")
+            new_err = err[1].__class__(str(clean_msg)) # type: ignore
+            err = (err[0], new_err, None)
+
+        # Record as failure or error like normal tests
+        if issubclass(err[0], AssertionError): # type: ignore
+            self.failure_count += 1
+            TestResult.addFailure(self, subtest, err) # type: ignore
+            _, _exc_str = self.failures[-1]
+            # output = self.complete_output()
+            self.result.append((1, subtest, "output", _exc_str))
+            if Config.PRINT_LIVE:
+                sys.stderr.write('F')
+        else:
+            self.error_count += 1
+            TestResult.addError(self, subtest, err)
+            _, _exc_str = self.errors[-1]
+            # output = self.complete_output()
+            self.result.append((2, subtest, "output", _exc_str))
+            if Config.PRINT_LIVE:
+                sys.stderr.write('E')
+
     def addSuccess(self, test):
         self.success_count += 1
         TestResult.addSuccess(self, test)
@@ -271,9 +298,11 @@ class _TestResult(TestResult):
 
         # Remove the traceback object to have single line error
         if Config.SINGLE_LINE_STACK:
-            err = (err[0], err[1], None)
+            clean_msg = str(err[1]).replace("\n", " ")
+            new_err = err[1].__class__(clean_msg) # type: ignore
+            err = (err[0], new_err, None)
 
-        TestResult.addError(self, test, err)
+        TestResult.addError(self, test, err) # type: ignore
         _, _exc_str = self.errors[-1]
         output = self.complete_output()
         self.result.append((2, test, output, _exc_str))
@@ -291,10 +320,10 @@ class _TestResult(TestResult):
         # Remove traceback to have single line failure
         if Config.SINGLE_LINE_STACK:
             # Replaces old exception with new instance with updated error message that is a single line
-            new_err = err[1].__class__(str(err[1]).replace("\n", "")[0])
+            new_err = err[1].__class__(str(err[1]).replace("\n", "")) # type: ignore
             err = (err[0], new_err, None)
 
-        TestResult.addFailure(self, test, err)
+        TestResult.addFailure(self, test, err) # type: ignore
         _, _exc_str = self.failures[-1]
         output = self.complete_output()
         self.result.append((1, test, output, _exc_str))
@@ -381,7 +410,7 @@ class TestRunner(Template_mixin):
         try:
             time_elapsed = (self.stopTime - self.startTime)
             sys.stderr.write('\nTests took %s - (%s)\n' % (humanize.naturaldelta(time_elapsed), time_elapsed))
-            self.stream.write(output.encode('utf8'))
+            self.stream.write(output.encode('utf8')) # type: ignore
         except TypeError:
             self.stream.write(output)
 
@@ -389,7 +418,7 @@ class TestRunner(Template_mixin):
         a_lines = []
         for name, value in report_attrs:
             line = self.bc.CYAN + name + ": " + self.bc.END + value + "\n"
-        a_lines.append(line)
+        a_lines.append(line) # type: ignore
         heading = ''.join(a_lines) + \
                   self.bc.CYAN + "Description:" + self.bc.END + self.description + "\n"
         return heading
@@ -440,7 +469,11 @@ class TestRunner(Template_mixin):
         has_output = bool(output or error)
         tid = (n == 0 and 'p' or 'f') + 't%s.%s' % (cid + 1, tid + 1)
         name = test.id().split('.')[-1]
+
         doc = test.shortDescription() or ""
+        if "%ignore" in doc:
+            doc = ""
+
         desc = doc and ('%s: %s' % (name, doc)) or name
         tmpl = has_output and self.REPORT_TEST_WITH_OUTPUT_TMPL or self.REPORT_TEST_NO_OUTPUT_TMPL
 
@@ -449,7 +482,7 @@ class TestRunner(Template_mixin):
             # TODO: some problem with 'string_escape': it escape \n and mess up formating
             # uo = unicode(o.encode('string_escape'))
             try:
-                uo = output.decode('latin-1')
+                uo = output.decode('latin-1') # type: ignore
             except AttributeError:
                 uo = output
         else:
@@ -458,7 +491,7 @@ class TestRunner(Template_mixin):
             # TODO: some problem with 'string_escape': it escape \n and mess up formating
             # ue = unicode(e.encode('string_escape'))
             try:
-                ue = error.decode('latin-1')
+                ue = error.decode('latin-1') # type: ignore
             except AttributeError:
                 ue = error
         else:
@@ -482,6 +515,40 @@ class TestRunner(Template_mixin):
 ##############################################################################
 # Facilities for running tests from the command line
 ##############################################################################
+# test_write (key='exists') | outputException: 
+# {'_testMethodName': 'runTest',
+#  '_outcome': None,
+#  '_testMethodDoc': None,
+#  '_cleanups': [],
+#  '_subtest': None,
+#  '_type_equality_funcs': {<class 'dict'>: 'assertDictEqual'
+# , <class 'list'>: 'assertListEqual',
+#  <class 'tuple'>: 'assertTupleEqual',
+#  <class 'set'>: 'assertSetEqual',
+#  <class 'frozenset'>: 'assertSetEqual',
+#  <class 'str'>: 'assertMultiLineEqual'},
+#  '_message': <object object at 0x0000021859E34A20>,
+#  'test_case': <test.test_cases.test_permissions.TestPermissions testMethod=test_write>,
+#  'params': _OrderedChainMap({'key': 'exists'}),
+#  'failureException': <class 'AssertionError'>
+#
+#
+#   | test_write (key='has')    | 
+# outputException: 
+# {'_testMethodName': 'test_write',
+#  '_outcome': <unittest.case._Outcome object at 0x0000020F88235AB0>,
+#  '_testMethodDoc': '%ignore\n        Permissions<write>\n        ',
+#  '_cleanups': [],
+#  '_subtest': None,
+#  '_type_equality_funcs': {<class 'dict'>: 'assertDictEqual', <class 'list'>: 'assertListEqual',
+#  <class 'tuple'>: 'assertTupleEqual',
+#  <class 'set'>: 'assertSetEqual',
+#  <class 'frozenset'>: 'assertSetEqual',
+#  <class 'str'>: 'assertMultiLineEqual'},
+#  'root_conn': <Connection.Connection.Connection object at 0x0000020F88237610>,
+#  'root_collection': <Connection.Collection.Collection object at 0x0000020F88235150>,
+#  'perm_conn': <Connection.Connection.Connection object at 0x0000020F882370D0>}
+
 
 # Note: Reuse unittest.TestProgram to launch test. In the future we may
 # build our own launcher to support more specific command line
@@ -493,23 +560,8 @@ class TestProgram(unittest.TestProgram):
     """
 
     def runTests(self):
-        # Pick TestRunner as the default test runner.
-        # base class's testRunner parameter is not useful because it means
-        # we have to instantiate TestRunner before we know self.verbosity.
         if self.testRunner is None:
             self.testRunner = TestRunner(verbosity=self.verbosity)
         unittest.TestProgram.runTests(self)
 
 main = TestProgram
-
-##############################################################################
-# Executing this module from the command line
-##############################################################################
-
-# if __name__ == "__main__":
-#     print("w")
-#     result = main(module=None)  # This returns the TestProgram, not result
-#     print("x")
-#     success = result.result.wasSuccessful()
-#     print(success, "AAJDJASDJASDJA")
-#     sys.exit(0 if success else 1)

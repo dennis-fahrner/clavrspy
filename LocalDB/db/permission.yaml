@@ -1,13 +1,13 @@
 root:
-  authtoken: "root-token"
+  authtoken: root
 
 default:
-  authtoken: "default-token"
+  authtoken: default
   operations:
     read.get: true
     write.put: true
 
 alice:
-  authtoken: "alice-token"
+  authtoken: alice
   operations:
     read.get: true

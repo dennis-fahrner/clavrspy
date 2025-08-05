@@ -2,7 +2,7 @@ from Connection.Connection import Connection
 from Connection.DBSocket.TCPSocket import TCPSocket
 from test.test_env import TEST_IP, TEST_PORT
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     # TODO Transactions
     # Instead of having execute, execute_single with parts, return the operation before hand.
     # Then decide in the handle_request function how to implement it.
@@ -44,20 +44,55 @@ if __name__ == '__main__':
     #
     # TODO Create Empty
     # there is no method to definitively create an empty bag, should there be one?
+
+    # 
+    #  /|     
+    #   |.    
+    #  __     
+    #   _)    
+    #  /__.   
+    #  __     
+    #   _)    
+    #  __).   
+    #  |__|   
+    #   __|.  
+    #  |_     
+    #  __).   
+    #   __    
+    #  /__    
+    #  \__).  
+    #  ___    
+    #    /    
+    #   / .   
+    #   __    
+    #  (__)   
+    #  (__).  
+    #   __    
+    #  (__\   
+    #   __/.  
+    #   __    
+    #  /  \   
+    #  \__/.
     #
-    # https://redis.io/docs/interact/transactions/#:~:text=Redis%20Transactions%20allow%20the%20execution,are%20serialized%20and%20executed%20sequentially.
-    # TODO implement WATCH keyword from redis
-    # ???
     #
-    # TODO Persist and Load
-    # Use read_handle.map_into()
     #
-    
+    # PROBLEM WITH TEST:
+    # When write is set, then pop works, else it fails
+    #
+    #
+    with open("./doc/icon-text", "r", encoding="utf-8") as file:
+        print("\n")
+        for line in file.readlines():
+            print(line.strip("\n"))
+
+    exit()
+
     from LocalDB.Local import Local
-    local = Local(permission_file=True)
+
+    local = Local(permission_file="permission_test.yaml")
 
     socket = TCPSocket("127.0.0.1", 3254)
-    with Connection("user!auth/?name:name", socket=socket) as db:
+    with Connection("user@auth/?name:name", socket=socket) as db:
         col = db.get_collection()
         # print(db.put(col.a, "value1"))
         # print(db.get(col.a))
@@ -73,7 +108,7 @@ if __name__ == '__main__':
         print("POP:", db.pop(col.a), db.get(col.a))
         db.put(col.a, ["a", "b"])
         print("AUTHENTICATE", db.raw('AUTH "root" "root"'))
-        print("AUTHENTICATE", db.raw('AUTH "alice" "alice-token"'))
+        print("AUTHENTICATE", db.raw('AUTH "test_basic" "auth"'))
         # print("PURGE", db.raw('PURGE'))
         # print("RAW:", db.raw("UnpollutedPartOfMessageMessagePollutedErrorPython"))
         # print("RAW2:", db.raw("Test"))

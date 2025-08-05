@@ -16,10 +16,6 @@ class DBSocket(ABC):
         pass
 
     @abstractmethod
-    def authenticate(self, connection_string: Optional[ConnectionString]) -> bool:
-        pass
-
-    @abstractmethod
     def connect(self):
         pass
 

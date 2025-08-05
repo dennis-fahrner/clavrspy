@@ -10,10 +10,11 @@ class TestRequest(TestCase):
 
     @classmethod
     def setUpClass(cls) -> None:
-        cls.db = Local.test_instance()
+        cls.db = Local.test_instance(permission_file="permission.yaml")
 
     def setUp(self) -> None:
         self.conn = Connection(socket=TCPSocket(TEST_IP, TEST_PORT))
+        self.conn.authenticate("root", "root")
         self.collection = self.conn.get_collection()
 
     def tearDown(self) -> None:

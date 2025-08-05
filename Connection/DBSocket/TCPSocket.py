@@ -40,9 +40,6 @@ class TCPSocket(DBSocket):
         self.__socket.connect((self.ip, self.port))
         self.__alive = True
 
-    def authenticate(self, connection_string: ConnectionString) -> bool:
-        return True
-
     def send(self, msg: str):
         self.__socket.send((msg + DBSocket.SEND_CHAR).encode(DBSocket.ENCODING))
 

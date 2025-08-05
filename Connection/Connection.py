@@ -1,5 +1,6 @@
 from __future__ import annotations
 from typing import Dict, Optional, Union, List
+import functools
 
 from Connection.DBSocket.DBSocket import DBSocket
 from Connection.DBSocket.TCPSocket import TCPSocket
@@ -13,27 +14,49 @@ from Connection._fmt import fmt
 from Connection._from_response import from_response
 
 
+class User:
+    user: str
+
+    def __init__(self) -> None:
+        self.user = ""
+
+
+def __testhint__(op_type: str, restricted: bool = False):
+    # Add any testhints that are necessary to differentiate functions here
+    # e.g. if a method is read or write or if its restricted
+    def decorator(func):
+        func.__testhint__ = {"op_type": op_type}  # store metadata on original function
+        if restricted:
+            func.__testhint__["restricted"] = True
+        @functools.wraps(func)
+        def wrapper(*w_args, **w_kwargs):
+            return func(*w_args, **w_kwargs)
+        wrapper.__testhint__ = func.__testhint__  # type: ignore # copy to wrapper too
+        return wrapper
+    return decorator
+
+
 @typechecked
 class Connection:
     __pointers: Dict[str, DataPointer]
-    __connection_string: Optional[ConnectionString]
     __address: str
     __port: int
     __socket: DBSocket
     __frozen = False
+    __user: User = User()
 
     def __init__(self, connection_string: str = "", socket: Optional[DBSocket] = None):
         self.__pointers = dict()
-        try:
-            self.__connection_string = ConnectionString(connection_string)
-        except (ValueError, TypeError):
-            self.__connection_string = None
+
+        if connection_string:
+            try:
+                connection_string_obj = ConnectionString(connection_string)
+            except (ValueError, TypeError) as e:
+                raise e
+            # raise NotImplementedError
 
         self.__socket = socket or TCPSocket()
         self.__socket.connect()
-
-        if not self.__socket.authenticate(self.__connection_string):
-            raise ConnectionError("Database Authentication failed")
 
         # Freeze this class
         self.__frozen = True
@@ -68,6 +91,10 @@ class Connection:
     def __alive__(self) -> bool:
         return self.__socket.__alive__
 
+    @property
+    def user(self) -> str:
+        return self.__user.user
+
     def close(self):
         self.__socket.close()
 
@@ -95,6 +122,7 @@ class Connection:
         return self._send_recv(raw, give_error)
 
     # Read
+    @__testhint__('read')
     def get(self, data: Union[DataPointer, List[DataPointer]]) -> List[List[str]]:
         """
         get returns the data stored at the location of each DataPointer.c
@@ -107,6 +135,7 @@ class Connection:
 
         return self._send_recv(f'GET {fmt(data)}')
 
+    @__testhint__('read')
     def exists(self, data: Union[DataPointer, List[DataPointer]]) -> List[bool]:
         """
         exists returns whether a key is found in the database for each DataPointer.
@@ -117,6 +146,7 @@ class Connection:
             data = [data]
         return self._send_recv(f'EXISTS {fmt(data)}')
 
+    @__testhint__('read')
     def has(self, data: Union[DataPointer, List[DataPointer]], value: str) -> List[bool]:
         """
         has returns whether a keyword is present for one or more given pointers
@@ -130,8 +160,9 @@ class Connection:
         return self._send_recv(f'HAS {fmt(data)} {fmt(value)}')
 
     # Write
+    @__testhint__('write')
     def put(self, data: Union[DataPointer, List[DataPointer]],
-            value: Union[str, List[str], List[List[str]]]):  # -> bool:
+            value: Union[str, List[str], List[List[str]]]) -> bool:
         """
         :param data:
         :param value:
@@ -143,25 +174,28 @@ class Connection:
         # List[str]
         elif isinstance(value, list):
             if value and not isinstance(value[0], list):
-                value = [value]
+                value = [value] # type: ignore
         # DataPointer
         if isinstance(data, DataPointer):
             data = [data]
 
-        return self._send_recv(f'PUT {fmt(data)} {fmt(value)}')
+        return self._send_recv(f'PUT {fmt(data)} {fmt(value)}') # type: ignore
 
+    @__testhint__('write')
     def delete(self, data: Union[DataPointer, List[DataPointer]]) -> bool:
         if isinstance(data, DataPointer):
             data = [data]
 
         return self._send_recv(f'DELETE {fmt(data)}')
 
+    @__testhint__('write')
     def clear(self, data: Union[DataPointer, List[DataPointer]]) -> bool:
         if isinstance(data, DataPointer):
             data = [data]
 
         return self._send_recv(f'CLEAR {fmt(data)}')
 
+    @__testhint__('write')
     def retract(self, data: Union[DataPointer, List[DataPointer]], value: Union[str, List[str]]) -> bool:
         # str
         if isinstance(value, str):
@@ -172,6 +206,7 @@ class Connection:
 
         return self._send_recv(f'RETRACT {fmt(data)} {fmt(value)}')
 
+    @__testhint__('write')
     def replace(self, data: DataPointer, value: Union[str, List[str]]) -> bool:
         if isinstance(value, str):
             value = [value]
@@ -179,10 +214,12 @@ class Connection:
         return self._send_recv(f'REPLACE {fmt(data)} {fmt(value)}')
 
     # Restricted Write
+    @__testhint__('write', restricted=False)
     def purge(self):
         return self._send_recv(f'PURGE')
 
     # Read-Write
+    @__testhint__('write')
     def pop(self, data: DataPointer) -> List[str]:
         return self._send_recv(f'POP {fmt(data)}')
 
@@ -195,6 +232,12 @@ class Connection:
 
     def execute_transaction(self):
         return self._send_recv(f'EXECUTE')
+    
+    # Authentication
+    def authenticate(self, name, authtoken):
+        recv: str = self._send_recv(f'AUTH {fmt(name)} {fmt(authtoken)}')
+        self.__user.user = recv.removeprefix("Authenticated: ")
+        return recv
 
 
 class Transaction:

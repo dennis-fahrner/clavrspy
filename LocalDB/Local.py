@@ -33,7 +33,7 @@ class Local:
         ip: str = "127.0.0.1",
         port: int = 3254,
         mode: Mode = Mode.Default,
-        permission_file: bool = False,
+        permission_file: Optional[str] = None,
         **_kwargs
     ):
         # https://stackoverflow.com/questions/14735001/ignoring-output-from-subprocess-popen
@@ -41,7 +41,7 @@ class Local:
         arguments = [str(self.path), "--address", address, "--mode", mode.value]
 
         if permission_file:
-            permission_path = str(get_base_path() / "permission.yaml")
+            permission_path = str(get_base_path() / permission_file)
             arguments += ["--perm-path", permission_path]
 
         # TODO, capture / save error outputs maybe with PIPE
@@ -61,11 +61,11 @@ class Local:
             # Increasing timeout 0.5 -> 1.0 -> 2.0 -> 4.0
             time.sleep(0.5 * (2 ** i))
         else:
-            raise ConnectionError(f"Database did not start up correctly or in time.") #  ({self.__process.communicate()})")
+            raise ConnectionError("Database did not start up correctly or in time.") #  ({self.__process.communicate()})")
 
     @classmethod
-    def test_instance(cls):
-        return Local(ip=TEST_IP, port=TEST_PORT, mode=Mode.Test)
+    def test_instance(cls, permission_file: Optional[str] = None):
+        return Local(ip=TEST_IP, port=TEST_PORT, mode=Mode.Test, permission_file=permission_file)
 
     def kill(self):
         if self.__alive:
