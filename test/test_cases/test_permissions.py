@@ -82,31 +82,62 @@ class TestPermissions(TestCase):
 
     def test_write(self) -> None:
         """%ignore
-        Permissions<write>
+        Permissions<write,-read>
         """
         write_funcs = {
             k: v for k, v in self.functions.items()
             if "write" in v[0].__testhint__["op_type"]
         }
+        failures, errors = ([], [])
         for key, value in write_funcs.items():
             with self.subTest(key=key):
-                func, data = value[0], value[1]
-                data = {k: param_func(self) for k, param_func in data.items()}
-                func(self.perm_conn, **data)
+                try:
+                    func, data = value[0], value[1]
+                    data = {k: param_func(self) for k, param_func in data.items()}
+                    func(self.perm_conn, **data)
+
+                except Exception as e:
+                    if isinstance(e, AssertionError):
+                        failures.append((key, e))
+                    else:
+                        errors.append((key, e))
+                    raise e
+        if errors:
+            msg = "[" + ",".join(k for k, _e in errors) + "]"
+            raise Exception(f"One or more subtests raised errors:\n{msg}")
+        elif failures:
+            msg = "[" + ",".join(k for k, _e in failures) + "]"
+            raise AssertionError(f"One or more subtests failed:\n{msg}")
     
     def test_read(self) -> None:
         """%ignore
-        Permissions<read>
+        Permissions<read,-write>
         """
+        failures = []
         write_funcs = {
             k: v for k, v in self.functions.items()
             if "read" in v[0].__testhint__["op_type"]
         }
+        failures, errors = ([], [])
         for key, value in write_funcs.items():
             with self.subTest(key=key):
-                func, data = value[0], value[1]
-                data = {k: param_func(self) for k, param_func in data.items()}
-                func(self.perm_conn, **data)
+                try:
+                    func, data = value[0], value[1]
+                    data = {k: param_func(self) for k, param_func in data.items()}
+                    func(self.perm_conn, **data)
+
+                except Exception as e:
+                    if isinstance(e, AssertionError):
+                        failures.append((key, e))
+                    else:
+                        errors.append((key, e))
+                    raise e
+        if errors:
+            msg = "[" + ",".join(k for k, _e in errors) + "]"
+            raise Exception(f"One or more subtests raised errors:\n{msg}")
+        elif failures:
+            msg = "[" + ",".join(k for k, _e in failures) + "]"
+            raise AssertionError(f"One or more subtests failed:\n{msg}")
 
 def __set_up_functions(cls) -> None:
     # For every database operation function (with __testhint__ decorator) generate two test
@@ -144,9 +175,10 @@ def __set_up_functions(cls) -> None:
 
         # Permission name for the yaml file
         permission_name = f"{op_type}.{func_name}"
+        prefix = "test_auto__"
         
         # Generate the positive test, if all is false except that specific operation => it should work
-        test_name = f"test__auto__{op_type}_{func_name}"
+        test_name = prefix + f"{op_type}_{func_name}"
         def fn(self, _parameters=parameters, _func=func):
             _fn = {key: param_func(self) for key, param_func in _parameters.items()}
             _func(self.perm_conn, **_fn)
@@ -154,7 +186,7 @@ def __set_up_functions(cls) -> None:
         setattr(cls, test_name, fn)
 
         # Generate the negative test, if all is true except that specific operation => it should not work
-        negative_test_name = f"test__auto__{op_type}_{func_name}_denied"
+        negative_test_name = prefix + f"{op_type}_{func_name}_denied"
         def fn_(self, _parameters=parameters, _func=func):
             with self.assertRaises(Exception) as err:
                 _fn = {key: param_func(self) for key, param_func in _parameters.items()}

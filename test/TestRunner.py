@@ -83,7 +83,9 @@ class Table(object):
         self.allow_newlines = allow_newlines
 
     def __length__(self, x):  # type: ignore
-        return len(re.sub(r"\033\[[0-9];[0-9];[0-9]{1,2}m", "", x))
+        ansi_escape = re.compile(r'\x1B\[[0-?]*[ -/]*[@-~]')
+        return len(ansi_escape.sub('', x))
+        # return len(re.sub(r"\033\[[0-9];[0-9];[0-9]{1,2}m", "", x))
 
     def addRow(self, row):
         rows = [[''] for l in range(len(row))]
@@ -112,25 +114,55 @@ class Table(object):
         self.__titles__ = titles
 
     def __repr__(self):
+       # Collect all rows including titles
+        all_rows = []
+        if self.__titles__:
+            all_rows.append(self.__titles__)
+        all_rows.extend(self.__rows__)
+
+        # Compute column count
+        col_count = max(len(r) for r in all_rows) if all_rows else 0
+
+        # Pad all rows to col_count
+        for i in range(len(all_rows)):
+            if len(all_rows[i]) < col_count:
+                all_rows[i] += [''] * (col_count - len(all_rows[i]))
+
+        # Compute max widths per column using visible lengths
+        col_widths = [0] * col_count
+        for r in all_rows:
+            for i, cell in enumerate(r):
+                length = self.__length__(cell)
+                if length > col_widths[i]:
+                    col_widths[i] = length
+
+        # Build horizontal line
         hline = self.padding + "+"
-        for x in self.__columnSize__:
-            hline += (x + 2) * '-' + '+'
-        rows = []
-        if self.__titles__ is None:
-            title = ""
+        for w in col_widths:
+            hline += "-" * (w + 2) + "+"
+
+        # Build title line
+        if self.__titles__:
+            titles_padded = []
+            for i, t in enumerate(self.__titles__):
+                titles_padded.append(t.center(col_widths[i]))
+            title_line = self.padding + "| " + " | ".join(titles_padded) + " |"
+            output = hline + "\n" + title_line + "\n" + hline + "\n"
         else:
-            if len(self.__titles__) < len(self.__columnSize__):
-                self.__titles__ += ((len(self.__columnSize__) - len(self.__titles__)) * [''])
-            for i, x in enumerate(self.__titles__):
-                self.__titles__[i] = x.center(self.__columnSize__[i])
-            title = self.padding + "| " + " | ".join(self.__titles__) + " |\n" + hline + "\n"
-        for x in self.__rows__:
-            if len(x) < len(self.__columnSize__):
-                x += ((len(self.__columnSize__) - len(x)) * [''])
-            for i, c in enumerate(x):
-                x[i] = c.ljust(self.__columnSize__[i]) + (len(c) - self.__length__(c) - 3) * ' '
-            rows.append(self.padding + "| " + " | ".join(x) + " |")
-        return hline + "\n" + title + "\n".join(rows) + "\n" + hline + "\n"
+            output = hline + "\n"
+
+        # Build data rows
+        for r in self.__rows__:
+            if len(r) < col_count:
+                r += [''] * (col_count - len(r))
+            padded_cells = []
+            for i, c in enumerate(r):
+                visible_len = self.__length__(c)
+                padded_cells.append(c + ' ' * (col_widths[i] - visible_len))
+            output += self.padding + "| " + " | ".join(padded_cells) + " |\n"
+
+        output += hline + "\n"
+        return output
 
 
 class bcolors(object):
@@ -258,7 +290,7 @@ class _TestResult(TestResult):
     def addSubTest(self, test, subtest, err):
         # Add a custom printing function for the subclass
         def dummy_id(self):
-            return f"{test._testMethodName} [{','.join([f'{v}' for k,v in subtest.params.items()])}]" # pyright: ignore[reportAttributeAccessIssue]
+            return f" ⤷{test._testMethodName} [{','.join([f'{v}' for k,v in subtest.params.items()])}]" # pyright: ignore[reportAttributeAccessIssue]
         subtest.id = types.MethodType(dummy_id, subtest)
 
         # Add a SubTest
@@ -364,19 +396,33 @@ class TestRunner(Template_mixin):
     def sortResult(self, result_list):
         rmap = {}
         classes = []
+        seen_parents = set()
+
         for n, test, output, error in result_list:
-            testClass = test.__class__
+            is_subtest = hasattr(test, "test_case")
+            parent_test = getattr(test, "test_case", test)
+            test_class = parent_test.__class__
 
-            # If test is a subtest, add it under the original test
-            if test.__dict__.get("test_case"):
-                testClass = test.__dict__.get("test_case").__class__
+            if test_class not in rmap:
+                rmap[test_class] = []
+                classes.append(test_class)
 
-            if testClass not in rmap:
-                rmap[testClass] = []
-                classes.append(testClass)
-            rmap[testClass].append((n, test, output, error))
-        r = [(testClass, rmap[testClass]) for testClass in classes]
-        return r
+            # Ensure parent test is added once (either as standalone or before subtests)
+            if is_subtest:
+                if parent_test not in seen_parents:
+                    parent_result = next(
+                    ((pn, pt, po, pe) for pn, pt, po, pe in result_list if pt == parent_test),
+                    (n, parent_test, "", "")  # fallback in case not found
+                    )
+                    rmap[test_class].append(parent_result)
+                    seen_parents.add(parent_test)
+                rmap[test_class].append((n, test, output, error))
+            else:
+                if test not in seen_parents:
+                    rmap[test_class].append((n, test, output, error))
+                    seen_parents.add(test)
+
+        return [(cls, rmap[cls]) for cls in classes]
 
     def getReportAttributes(self, result):
         """
