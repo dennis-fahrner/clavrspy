@@ -236,7 +236,14 @@ class Connection:
     # Authentication
     def authenticate(self, name, authtoken):
         recv: str = self._send_recv(f'AUTH {fmt(name)} {fmt(authtoken)}')
-        self.__user.user = recv.removeprefix("Authenticated: ")
+        
+        # 3.8 version compatability
+        try:
+            self.__user.user = recv.removeprefix("Authenticated: ")
+        except AttributeError:
+            prefix = "Authenticated: "
+            if recv.startswith(prefix):
+                self.__user.user = recv[len(prefix):]
         return recv
 
 
