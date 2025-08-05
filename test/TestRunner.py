@@ -29,6 +29,7 @@ try:
     from StringIO import StringIO # type: ignore
 except ImportError:
     from io import StringIO
+import time
 import types
 import sys
 import re
@@ -257,7 +258,7 @@ class _TestResult(TestResult):
     def addSubTest(self, test, subtest, err):
         # Add a custom printing function for the subclass
         def dummy_id(self):
-            return f"{test._testMethodName} [{','.join([f'{k}={v}' for k,v in subtest.params.items()])}]" # pyright: ignore[reportAttributeAccessIssue]
+            return f"{test._testMethodName} [{','.join([f'{v}' for k,v in subtest.params.items()])}]" # pyright: ignore[reportAttributeAccessIssue]
         subtest.id = types.MethodType(dummy_id, subtest)
 
         # Add a SubTest
@@ -401,6 +402,7 @@ class TestRunner(Template_mixin):
         ]
 
     def generateReport(self, test, result):
+        time.sleep(1)
         report_attrs = self.getReportAttributes(result)
         heading = self._generate_heading(report_attrs)
         report = self._generate_report(result)
@@ -467,6 +469,7 @@ class TestRunner(Template_mixin):
         return report
 
     def _generate_report_test(self, cid, tid, n, test, output, error):
+        # maybe here the error thing with indent
         has_output = bool(output or error)
         tid = (n == 0 and 'p' or 'f') + 't%s.%s' % (cid + 1, tid + 1)
         name = test.id().split('.')[-1]

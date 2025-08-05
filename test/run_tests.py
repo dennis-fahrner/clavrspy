@@ -5,7 +5,7 @@ from LocalDB.Local import get_clavrs_version
 
 if __name__ == '__main__':
     # If Subtest fails, the main test is not shown
-    #
+    # Check the action logs, the .... line appears somewhere in the middle of the thing??
     Config.PRINT_LIVE = True
     Config.SINGLE_LINE_STACK = True
 
